@@ -1,0 +1,15 @@
+[depend]
+bruc = {repo, git@github.com:marc24force/bruc.git}
+#bruc = {path, ../bruc}
+
+[project]
+
+name = bosc
+
+targets = {bin/bosc}
+includes = {include/}
+sources = {src/Bosc.cpp, src/main.cpp}
+flags = -Wall -O3
+
+[dirs]
+build = bosc_build
