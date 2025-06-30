@@ -38,9 +38,8 @@ int main(int argc, char* argv[]) {
 	    app.build();
 	    std::cout << "Build complete\n";
     } else if (command == "install") {
-	    std::cout << "Install not implemneted\n";
 	    //app.build() //do some conditional
-	    //app.install();
+	    app.install();
 	    std::cout << "Install complete\n";
     } else if (command == "clean") {
 	    app.clean();
@@ -49,11 +48,12 @@ int main(int argc, char* argv[]) {
 	    app.clean_deps();
 	    std::cout << "Project and subprojects cleaned\n";
     } else if (command == "uninstall") {
+	    app.uninstall();
 	    std::cout << "Project uninstalled\n";
     } else if (command == "purge") {
-	    //app.clean_deps();
-	    //app.clean();
-	    //app.purge();
+	    app.uninstall();
+	    app.clean_deps();
+	    app.purge();
 	    std::cout << "Project purged\n";
     }
     

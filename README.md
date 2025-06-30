@@ -1,13 +1,13 @@
 # BOSC - Build Orginization and Script in Cascade
 
 ## TODO
-- install/uninstall
-- purge
 - proper skip build if file exists
 - add deps when not building
 - arguments
 - clean code
-- option for linker
+- Automatic linker (ld if pure c, g++ if c++)
+- Append -Wl to linker flags if c++
+- build if src is new than object
 
 ## Example
 ```ini

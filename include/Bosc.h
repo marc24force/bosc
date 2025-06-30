@@ -43,10 +43,11 @@ class Bosc {
 		void init();
 		void depend();
 		void build();
-		//void install();
+		void install();
 		void clean();
 		void clean_deps();
-		//void purge();
+		void uninstall();
+		void purge();
 
 		Bosc(fs::path local_dir, Bosc* parent);
 		~Bosc();

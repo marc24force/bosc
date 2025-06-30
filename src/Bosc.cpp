@@ -185,3 +185,27 @@ void Bosc::clean_deps() {
 	}
 	clean();
 }
+
+void Bosc::install() {
+	std::string name = conf.get("project", "name", "UNKNOWN");
+	fs::path dir_install = getAbsPath(conf.get<fs::path>("dirs", "install", "/opt")) / name;
+	fs::path dir_build = getAbsPath(conf.get<fs::path>("dirs", "build", "build"));
+	fs::path dir_targets = dir_build / "targets";
+	if (std::filesystem::exists(dir_targets)) {
+		std::string cmd = "rsync -a " + dir_targets.string() + "/ " + dir_install.string();
+		if (std::system(cmd.c_str())) exit(1);
+	}
+}
+
+void Bosc::uninstall() {
+	std::string name = conf.get("project", "name", "UNKNOWN");
+	fs::path dir_install = getAbsPath(conf.get<fs::path>("dirs", "install", "/opt")) / name;
+	std::string cmd = "rm -rf " + dir_install.string();
+	if (std::system(cmd.c_str())) exit(1);
+}
+
+void Bosc::purge() {
+	dir_repos = getAbsPath(conf.get<fs::path>("dirs", "repos", ".bosc"));
+	std::string cmd = "rm -rf " + dir_repos.string();
+	if (std::system(cmd.c_str())) exit(1);
+}
