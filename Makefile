@@ -1,7 +1,7 @@
 SRC := $(wildcard src/*.cpp)
 OBJ := $(patsubst src/%.cpp, make_build/%.o, $(SRC))
 
-BRUC := .bruc
+BRUC := .bosc/bruc
 
 CXX := g++
 CXXFLAGS := -Wall -O3 -I$(BRUC)/include -Iinclude
@@ -10,7 +10,7 @@ OUT := make_bosc.exe
 all: $(OUT)
 
 $(BRUC)/lib/libbruc.a: 
-	git clone https://github.com/marc24force/bruc.git $(BRUC)
+	-git clone https://github.com/marc24force/bruc.git $(BRUC)
 	$(MAKE) -C $(BRUC)
 
 
@@ -23,4 +23,7 @@ make_build/%.o: src/%.cpp
 
 clean:
 	rm -rf make_build $(OUT)
+
+clean-all: clean
+	rm -rf $(BRUC)
 

@@ -6,6 +6,8 @@
 
 #include "Bosc.h"
 
+#define launch(exp, txt) do { if (exp) { std::cout << std::endl << txt << " failed\n"; return 1; } std::cout << std::endl << txt << " completed\n"; } while (0)
+
 int main(int argc, char* argv[]) {
     std::vector<std::string> valid_cmds = {"build", "install", "clean", "clean-all", "uninstall", "purge"};
     if (argc < 2) {
@@ -32,33 +34,12 @@ int main(int argc, char* argv[]) {
     auto abs_path = std::filesystem::absolute(".").lexically_normal();
     Bosc app(abs_path, nullptr);
 
-    if (command == "build") {
-	    app.init();
-	    app.depend();
-	    app.build();
-	    std::cout << "Build complete\n";
-    } else if (command == "install") {
-	    //app.build() //do some conditional
-	    app.install();
-	    std::cout << "Install complete\n";
-    } else if (command == "clean") {
-	    app.clean();
-	    std::cout << "Project cleaned\n";
-    } else if (command == "clean-all") {
-	    app.clean_deps();
-	    std::cout << "Project and subprojects cleaned\n";
-    } else if (command == "uninstall") {
-	    app.uninstall();
-	    std::cout << "Project uninstalled\n";
-    } else if (command == "purge") {
-	    app.uninstall();
-	    app.clean_deps();
-	    app.purge();
-	    std::cout << "Project purged\n";
-    }
-    
-
-
+    if (command == "build") launch(app.build(false), "Build");
+    else if (command == "install") launch(app.build(true), "Install");
+    else if (command == "clean") launch(app.clean(false), "Clean");
+    else if (command == "clean-all") launch(app.clean(true), "Clean-all");
+    else if (command == "uninstall") launch(app.uninstall(), "Uninstall");
+    else if (command == "purge") launch(app.purge(), "Purge");
     return 0;
 }
 

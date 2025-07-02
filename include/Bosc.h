@@ -13,42 +13,47 @@ namespace fs {
 //namespace fs = std::filesystem;
 
 class Bosc {
-	public:
-
-		Bruc conf;
-
-		static fs::path dir_repos;
+	private:
+		// Local variables
+		Bruc b;
 		fs::path dir_local;
-
-		// compiler section //global
-		static fs::path compiler_path; 
-		static std::string compiler_prefix;
-		static std::string compiler_flags;
-
-		// depend section
+		bool is_root;
 		std::string depend_flags_local;
 		std::string depend_flags_parent;
 
-		// export section //global
-		static std::string export_flags;
-		static fs::list export_includes;
-		static fs::list export_libs_path;
-		static std::vector<std::string> export_libs_name;
+		// Structs
+		struct Compiler {
+			fs::path path; 
+			std::string prefix;
+			std::string flags;
+		};
 
-		// project section
-		std::string project_link;
+		struct Export {
+			std::string flags;
+			fs::list includes;
+			fs::list lpaths;
+			std::vector<std::string> lnames;
+		};
 
-		fs::path getAbsPath(fs::path p);
+		// Static variables
+		static fs::path _repos;
+		static Compiler _compiler;
+		static Export _export;
 
-		void init();
-		void depend();
-		void build();
-		void install();
-		void clean();
-		void clean_deps();
-		void uninstall();
-		void purge();
+		// Utility functions
+		int load_bruc();
+		fs::path make_absolute(fs::path p);
+		int create_dir(fs::path dir);
+		int get_dep_path(fs::path& path, std::string name);
+		int build_dependency(std::string name);
+		bool is_older(fs::path p1, fs::path p2);
 
-		Bosc(fs::path local_dir, Bosc* parent);
-		~Bosc();
+
+	public:
+		Bosc(fs::path dir, Bosc* parent);
+		int build(bool install);
+		int clean(bool recursive);
+		int uninstall();
+		int purge();
+
 };

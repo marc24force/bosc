@@ -1,211 +1,229 @@
 #include <iostream>
+#include <fstream>
 #include "Bosc.h"
 
-fs::path Bosc::dir_repos;
-fs::path Bosc::compiler_path; 
-std::string Bosc::compiler_prefix;
-std::string Bosc::compiler_flags;
-std::string Bosc::export_flags;
-fs::list Bosc::export_includes;
-fs::list Bosc::export_libs_path;
-std::vector<std::string> Bosc::export_libs_name;
+fs::path Bosc::_repos;
+Bosc::Compiler Bosc::_compiler;
+Bosc::Export Bosc::_export;
 
 
-Bosc::Bosc(fs::path local_dir, Bosc* parent) {
-	std::string bruc_file = fs::path(local_dir / "bosc.bruc").string();
-	std::cout << "Reading " << bruc_file << std::endl;
+int Bosc::load_bruc() {
+	std::string bruc_file = fs::path(dir_local / "bosc.bruc").string();
 
-	conf = Bruc::readFile(bruc_file);
-	if (conf.error()) {
-		std::cerr << "ERROR! Couldn't process file " << bruc_file << std::endl;
-		exit(1);
+	b = Bruc::readFile(bruc_file);
+	if (b.error()) {
+		std::cerr << "Error: Couldn't process file " << bruc_file << std::endl;
+		std::cerr << "At line " << b.getErrorLine() << ": " << b.error().message() << std::endl;
+		return 1;
 	}
-
-	dir_local = local_dir;
-	if (parent != nullptr) {
-		depend_flags_parent = parent->depend_flags_local;
-		depend_flags_local = depend_flags_parent;
-	}
+	return 0;
 }
 
-Bosc::~Bosc() {}
 
-
-fs::path Bosc::getAbsPath(fs::path p) {
+fs::path Bosc::make_absolute(fs::path p) {
 	if (!p.is_absolute()) p = dir_local / p;
-	return p;
+	return p.lexically_normal();
 }
 
-
-void Bosc::init() {
-	dir_repos = getAbsPath(conf.get<fs::path>("dirs", "repos", ".bosc"));
-	std::filesystem::create_directories(dir_repos);
-	
-	// Compiler section
-	compiler_path = conf.get<fs::path>("compiler", "path");
-	compiler_prefix = conf.get("compiler", "prefix");
-	compiler_flags = conf.get("compiler", "flags");
-
+int Bosc::create_dir(fs::path dir) {
+	if (std::filesystem::exists(dir)) return 0;
+	if (std::filesystem::create_directories(dir)) return 0;
+	std::cerr << "Error: Couldn't create directory " << dir.string() << std::endl;
+	return 1;
 }
 
-void Bosc::depend() {
-
-	// Run pre depend script
-	fs::list scripts = conf.get<fs::list>("scripts", "pre_depend");
-	for (auto s : scripts) {
-		std::cout << "Running pre dependency script " << s << "\n";
-		if(std::system(getAbsPath(s).string().c_str())) exit(1);
+int Bosc::get_dep_path(fs::path& path, std::string name) {
+	std::vector<std::string> dep_line = b.get<std::vector<std::string>>("depend", name);
+	if(b.error()) {
+		std::cerr << "Error: Couldn't process dependency " << name;
+		std::cerr << " (" << b.error().message() << ")\n";
+		return 1;
 	}
-
-	// If no depend section skip this
-	if (!conf.exists("depend")) return;
-	depend_flags_local += conf.get("depend", "flags");
-
-	std::vector<std::string> dependencies = conf.getKeys("depend");
-	for ( auto depend_name : dependencies) {
-		std::cout << "Resolving dependency " << depend_name << "\n";
-		std::vector<std::string> depend_cmd = conf.get<std::vector<std::string>>("depend", depend_name);
-		fs::path depend_path;
-		if (depend_cmd[0] == "path") {
-			depend_path = getAbsPath(fs::path(depend_cmd[1]));
-		} else {
-			depend_path = dir_repos / depend_name;
-			if (!std::filesystem::exists(depend_path)) {
-				std::cout << "- Cloning repository: " << depend_cmd[1] << "\n";
-				std::string cmd = "git clone " + depend_cmd[1] + " " + depend_path.string();
-				if (std::system(cmd.c_str())) exit(1);
+	fs::path depend_path;
+	if (dep_line[0] == "path") path = make_absolute(fs::path(dep_line[1]));
+	else {
+		path = _repos / name;
+		if (!std::filesystem::exists(path)) {
+			std::cout << "- Cloning repository: " << dep_line[1] << "\n";
+			std::string cmd = "git clone " + dep_line[1] + " " + path.string();
+			if (std::system(cmd.c_str())) {
+				std::cerr << "Error: Couldn't clone repository\n";
+				return 1;
 			}
 		}
-		Bosc child(depend_path, this);
-		child.depend();
-		child.build();
 	}
+	return 0;
+}
+
+int Bosc::build_dependency(std::string name) {
+	fs::path dir; 
+	if (get_dep_path(dir, name)) return 1;
+
+	Bosc child(dir, this);
+	if (child.build(false)) return 1;
+
+	return 0;
+}
+
+bool Bosc::is_older(fs::path p1, fs::path p2) {
+	if (!std::filesystem::exists(p2)) {
+		std::cerr << "Warning: File " << p2.string() << " doesn't exist\n";
+	}
+	if (!std::filesystem::exists(p1)) return true;
+
+	auto t1 = std::filesystem::last_write_time(p1);
+	auto t2 = std::filesystem::last_write_time(p2);
+
+	return t1 < t2;
+}
+
+
+Bosc::Bosc(fs::path dir, Bosc* parent) : dir_local(dir), is_root(parent == nullptr) {
+	if (!is_root) {
+		depend_flags_parent = parent->depend_flags_local;
+	} 
+
+	depend_flags_local = depend_flags_parent;
 
 }
 
-void Bosc::build() {
-	// Create build directory
-	fs::path dir_build = getAbsPath(conf.get<fs::path>("dirs", "build", "build"));
-	fs::path dir_objs = dir_build / "obj";
-	std::filesystem::create_directories(dir_objs);
-	
-	// Run pre build script
-	fs::list scripts = conf.get<fs::list>("scripts", "pre_build");
-	for (auto s : scripts) {
-		std::cout << "Running pre build script " << s << "\n";
-		if(std::system(getAbsPath(s).string().c_str())) exit(1);
+int Bosc::build(bool install) {
+	if (load_bruc()) return 1;
+
+	// Set compiler and create the repo directory
+	if (is_root) { 
+		_repos = make_absolute(b.get<fs::path>("dirs", "repos", ".bosc"));
+		if (create_dir(_repos)) return 1;
+		_compiler.path = b.get<fs::path>("compiler", "path");
+		_compiler.prefix = b.get("compiler", "prefix");
+		_compiler.flags = b.get("compiler", "flags");
 	}
 
-	std::cout << "Starting build of " << conf.get("project", "name", "UNKNOWN") << "\n";
+	// Dependencies
+	std::vector<std::string> deps = b.getKeys("depend");
+	for (auto& d : deps) {
+		if (build_dependency(d)) return 1;
+	}
 
-	std::string flags = compiler_flags + " " + depend_flags_parent + " " + conf.get("project","flags") + " " + export_flags;
-	std::string gcc = (compiler_path / (compiler_prefix + "gcc")).string();
-	std::string gpp = (compiler_path / (compiler_prefix + "g++")).string();
+	std::cout << "\n[" << b.get("project", "name", "UNKNOWN") << "]" << std::endl;
+	// Build
+	fs::path dir_build = make_absolute(b.get<fs::path>("dirs", "build", "build"));
+	fs::path dir_objs = dir_build / "obj";
+	if (create_dir(dir_objs)) return 1;
+
+	std::string flags = _compiler.flags + " " + depend_flags_parent + " " + b.get("project","flags") + " " + _export.flags;
+	std::string gcc = (_compiler.path / (_compiler.prefix + "gcc")).string();
+	std::string gpp = (_compiler.path / (_compiler.prefix + "g++")).string();
 	std::string incl = "";
-	for (auto i : export_includes) incl += " -I"+i.string();
-	for (auto i : conf.get<fs::list>("project", "includes")) incl += " -I"+getAbsPath(i).string();
-	for (auto s : conf.get<fs::list>("project", "sources")) {
-		fs::path obj =  dir_objs / s.stem().concat(".o");
-		if (std::filesystem::exists(obj)) continue;
-		std::string cmd;
-		if (s.extension() == ".c" || s.extension() == ".S") cmd = gcc;
-		else cmd = gpp;
 
-		cmd += " " + flags + " " + incl + " -c " + getAbsPath(s).string() + " -o " + obj.string();
-		std::cout << "- Compiling " << s.string() << "\n";
-		if(std::system(cmd.c_str())) exit(1);
+	bool skip_link = true;
+
+	for (auto i : _export.includes) incl += " -I"+i.string();
+	for (auto i : b.get<fs::list>("project", "includes")) incl += " -I" + make_absolute(i).string();
+	for (auto s : b.get<fs::list>("project", "sources")) {
+		fs::path obj = dir_objs / s.stem().concat(".o");
+		if (is_older(obj,make_absolute(s))) {
+			std::string cmd;
+			if (s.extension() == ".c" || s.extension() == ".S") cmd = gcc;
+			else cmd = gpp;
+			cmd += " " + flags + " " + incl + " -c " + make_absolute(s).string() + " -o " + obj.string();
+			std::cout << "- Building " << s.filename().stem().string() << "\n";
+			if(std::system(cmd.c_str())) return 1;
+			skip_link = false;
+		}
 	}
 	std::string objs = (dir_objs / "*").string();
-
 	fs::path dir_targets = dir_build / "targets";
-	std::filesystem::create_directories(dir_targets);
-
-	for (auto t : conf.get<fs::list>("project", "targets")) {
+	if (create_dir(dir_targets)) return 1;
+	std::string msg;
+	for (auto& t : b.get<fs::list>("project", "targets")) { // We don't want the absolute path
 		if (t.is_absolute()) {
-			std::cerr << "ERROR! Target must be in a relative path\n";
-			exit(1);
+			std::cerr << "Error: Targets must be in a relative path\n";
+			return 1;
 		}
 		fs::path target = dir_targets / t;
-		if (std::filesystem::exists(target)) continue;
-		std::filesystem::create_directories(target.parent_path());
-		std::cout << "- Generating " << target.string() << "\n";
+		if (create_dir(target.parent_path()) ) return 1;
+		std::string cmd;
 		if (target.extension() == ".a") { //is a lib
-			std::string cmd;
-			cmd = (compiler_path / (compiler_prefix + "ar")).string();
+			cmd = (_compiler.path / (_compiler.prefix + "ar")).string();
 			cmd += " rcs " + target.string() + " " + objs;
-			if(std::system(cmd.c_str())) exit(1);
-
-			export_libs_path.push_back(target.parent_path());
-			export_libs_name.push_back(conf.get("project", "name", "UNKNOWN"));
+			_export.lpaths.push_back(target.parent_path());
+			_export.lnames.push_back(b.get("project", "name", "UNKNOWN"));
+			msg = "- Packing ";
 		} else {
-			std::string cmd;
-			std::string link = conf.get("project", "link");
-			for (auto l : export_libs_path) link += " -L" + l.string();
-			for (auto l : export_libs_name) link += " -l" + l;
+			std::string link = b.get("project", "link");
+			for (auto l : _export.lpaths) link += " -L" + l.string();
+			for (auto l : _export.lnames) link += " -l" + l;
 			cmd = gpp + " " + flags + " " + objs + " " + link + " " + " -o " + target.string();
-			if(std::system(cmd.c_str())) exit(1);
+			msg = "- Linking ";
+		}
+		if (std::filesystem::exists(target) && skip_link) continue;
+		std::cout << msg << target.filename().stem().string() << "\n";
+		if (std::system(cmd.c_str())) return 1;
+	}
+	_export.flags += b.get("export", "flags");
+	for (auto p : b.get<fs::list>("export", "includes")) _export.includes.push_back(make_absolute(p));
 
+	// Install
+	if (!install) return 0;
+	std::string name = b.get("project", "name", "UNKNOWN");
+	fs::path dir_install = make_absolute(b.get<fs::path>("dirs", "install", "/opt") / name);
+	std::string cmd = "rsync -a " + dir_targets.string() + "/ " + dir_install.string();
+	std::cout << "- Installing\n";
+	if (create_dir(dir_install)) return 1;
+	if (std::system(cmd.c_str())) return 1;
+
+	return 0;
+}
+
+
+int Bosc::clean(bool recursive) {
+	if (load_bruc()) return 1;
+	if (is_root) { 
+		_repos = make_absolute(b.get<fs::path>("dirs", "repos", ".bosc"));
+	}
+
+	if (recursive) {
+		std::vector<std::string> deps = b.getKeys("depend");
+		for (auto& d : deps) {
+			fs::path dir; 
+			if (get_dep_path(dir, d)) return 1;
+			Bosc child(dir, this);
+			if(child.clean(true)) return 1;
 		}
 
 	}
-
-	
-	// Run post build script
-	scripts = conf.get<fs::list>("scripts", "post_build");
-	for (auto s : scripts) {
-		std::cout << "Running post build script " << s << "\n";
-		if(std::system(getAbsPath(s).string().c_str())) exit(1);
-	}
-	
-	// Once build, set export flags
-	export_flags += conf.get("export", "flags");
-	fs::list tmp = conf.get<fs::list>("export", "includes");
-	for (auto p : tmp) export_includes.push_back(getAbsPath(p));
-}
-
-void Bosc::clean() {
-	fs::path dir_build = getAbsPath(conf.get<fs::path>("dirs", "build", "build"));
+	std::cout << "\n[" << b.get("project", "name", "UNKNOWN") << "]" << std::endl;
+	fs::path dir_build = make_absolute(b.get<fs::path>("dirs", "build", "build"));
 	std::string cmd = "rm -rf " + dir_build.string();
-	if(std::system(cmd.c_str())) exit(1);
+	std::cout << "- Cleaning\n";
+	if(std::system(cmd.c_str())) return 1;
+	return 0;
 }
 
-void Bosc::clean_deps() {
-	dir_repos = getAbsPath(conf.get<fs::path>("dirs", "repos", ".bosc"));
-	std::vector<std::string> dependencies = conf.getKeys("depend");
-	for ( auto depend_name : dependencies) {
-		std::vector<std::string> depend_cmd = conf.get<std::vector<std::string>>("depend", depend_name);
-		fs::path depend_path;
-		if (depend_cmd[0] == "path") {
-			depend_path = getAbsPath(fs::path(depend_cmd[1]));
-		} else {
-			depend_path = dir_repos / depend_name;
-		}
-		Bosc child(depend_path, this);
-		child.clean_deps();
-	}
-	clean();
-}
 
-void Bosc::install() {
-	std::string name = conf.get("project", "name", "UNKNOWN");
-	fs::path dir_install = getAbsPath(conf.get<fs::path>("dirs", "install", "/opt")) / name;
-	fs::path dir_build = getAbsPath(conf.get<fs::path>("dirs", "build", "build"));
-	fs::path dir_targets = dir_build / "targets";
-	if (std::filesystem::exists(dir_targets)) {
-		std::string cmd = "rsync -a " + dir_targets.string() + "/ " + dir_install.string();
-		if (std::system(cmd.c_str())) exit(1);
-	}
-}
-
-void Bosc::uninstall() {
-	std::string name = conf.get("project", "name", "UNKNOWN");
-	fs::path dir_install = getAbsPath(conf.get<fs::path>("dirs", "install", "/opt")) / name;
+int Bosc::uninstall() {
+	if (load_bruc()) return 1;
+	std::string name = b.get("project", "name", "UNKNOWN");
+	fs::path dir_install = make_absolute(b.get<fs::path>("dirs", "install", "/opt")) / name;
 	std::string cmd = "rm -rf " + dir_install.string();
-	if (std::system(cmd.c_str())) exit(1);
+	std::cout << "\n[" << b.get("project", "name", "UNKNOWN") << "]" << std::endl;
+	std::cout << "- Uninstalling\n";
+	if (std::system(cmd.c_str())) return 1;
+	return 0;
 }
 
-void Bosc::purge() {
-	dir_repos = getAbsPath(conf.get<fs::path>("dirs", "repos", ".bosc"));
-	std::string cmd = "rm -rf " + dir_repos.string();
-	if (std::system(cmd.c_str())) exit(1);
+int Bosc::purge() {
+	if(clean(true)) return 1;
+
+	std::string name = b.get("project", "name", "UNKNOWN");
+	fs::path dir_install = make_absolute(b.get<fs::path>("dirs", "install", "/opt")) / name;
+	std::string cmd = "rm -rf " + dir_install.string();
+	std::cout << "- Uninstalling\n";
+	if (std::system(cmd.c_str())) return 1;
+
+	cmd = "rm -rf " + _repos.string();
+	std::cout << "- Purging deps\n";
+	if (std::system(cmd.c_str())) return 1;
+	return 0;
 }

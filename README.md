@@ -1,13 +1,23 @@
 # BOSC - Build Orginization and Script in Cascade
 
 ## TODO
-- proper skip build if file exists
-- add deps when not building
+- improve build prints to avoid printing if nothing is done
+- improve lib build prints name instead of libname
 - arguments
 - clean code
 - Automatic linker (ld if pure c, g++ if c++)
 - Append -Wl to linker flags if c++
-- build if src is new than object
+- scripts depend, build and install
+
+## Install
+
+Set the install directory by modifying the bosc.bruc file. 
+Depending on the target directory the install command will require sudo.
+
+```bash
+make
+./make_bosc.exe install
+```
 
 ## Example
 ```ini
@@ -51,10 +61,6 @@ build = "build"
 install = "/opt"
 repos = ".bosc/repos" # Path were to download the dependencies
 
-[scripts]
-pre_depend = {/scripts/to/run/script.sh}  # Scripts to run before building dependencies
-pre_build = {/path/to/scripts/build.sh}   # Scripts to run before building the project
-post_build = {/path/to/scripts/finish.py} # Scripts to run after building the project
 
 ```
 
