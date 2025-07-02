@@ -4,7 +4,7 @@ OBJ := $(patsubst src/%.cpp, make_build/%.o, $(SRC))
 BRUC := .bruc
 
 CXX := g++
-CXXFLAGS := -Wall -O3 -I$(BRUC)/include/public -Iinclude
+CXXFLAGS := -Wall -O3 -I$(BRUC)/include -Iinclude
 OUT := make_bosc.exe
 
 all: $(OUT)
