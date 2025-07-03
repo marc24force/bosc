@@ -105,7 +105,7 @@ int Bosc::build(bool install) {
 		if (build_dependency(d)) return 1;
 	}
 
-	std::cout << "\n[" << b.get("project", "name", "UNKNOWN") << "]" << std::endl;
+	bool prj_printed = false;
 	// Build
 	fs::path dir_build = make_absolute(b.get<fs::path>("dirs", "build", "build"));
 	fs::path dir_objs = dir_build / "obj";
@@ -127,6 +127,10 @@ int Bosc::build(bool install) {
 			if (s.extension() == ".c" || s.extension() == ".S") cmd = gcc;
 			else cmd = gpp;
 			cmd += " " + flags + " " + incl + " -c " + make_absolute(s).string() + " -o " + obj.string();
+			if (!prj_printed) {
+				std::cout << "\n[" << b.get("project", "name", "UNKNOWN") << "]" << std::endl;
+				prj_printed = true;
+			}
 			std::cout << "- Building " << s.filename().stem().string() << "\n";
 			if(std::system(cmd.c_str())) return 1;
 			skip_link = false;
@@ -149,16 +153,20 @@ int Bosc::build(bool install) {
 			cmd += " rcs " + target.string() + " " + objs;
 			_export.lpaths.push_back(target.parent_path());
 			_export.lnames.push_back(b.get("project", "name", "UNKNOWN"));
-			msg = "- Packing ";
+			msg = "- Packing " + b.get("project", "name", "UNKNOWN");
 		} else {
 			std::string link = b.get("project", "link");
 			for (auto l : _export.lpaths) link += " -L" + l.string();
 			for (auto l : _export.lnames) link += " -l" + l;
 			cmd = gpp + " " + flags + " " + objs + " " + link + " " + " -o " + target.string();
-			msg = "- Linking ";
+			msg = "- Linking " + target.filename().stem().string();
 		}
 		if (std::filesystem::exists(target) && skip_link) continue;
-		std::cout << msg << target.filename().stem().string() << "\n";
+		if (!prj_printed) {
+			std::cout << "\n[" << b.get("project", "name", "UNKNOWN") << "]" << std::endl;
+			prj_printed = true;
+		}
+		std::cout << msg << std::endl;
 		if (std::system(cmd.c_str())) return 1;
 	}
 	_export.flags += b.get("export", "flags");
@@ -169,6 +177,10 @@ int Bosc::build(bool install) {
 	std::string name = b.get("project", "name", "UNKNOWN");
 	fs::path dir_install = make_absolute(b.get<fs::path>("dirs", "install", "/opt") / name);
 	std::string cmd = "rsync -a " + dir_targets.string() + "/ " + dir_install.string();
+	if (!prj_printed) {
+		std::cout << "\n[" << b.get("project", "name", "UNKNOWN") << "]" << std::endl;
+		prj_printed = true;
+	}
 	std::cout << "- Installing\n";
 	if (create_dir(dir_install)) return 1;
 	if (std::system(cmd.c_str())) return 1;

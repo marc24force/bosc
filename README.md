@@ -1,8 +1,6 @@
 # BOSC - Build Orginization and Script in Cascade
 
 ## TODO
-- improve build prints to avoid printing if nothing is done
-- improve lib build prints name instead of libname
 - arguments
 - clean code
 - Automatic linker (ld if pure c, g++ if c++)
