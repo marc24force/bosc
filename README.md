@@ -23,44 +23,48 @@ make
 ## Example
 ```ini
 
-# This section provides information on the compiler used to build the project
-[compiler] 
+[compiler] # section that defines the compiler used
+           # only executed in the root project and shared with all dependencies
 
-path = "/path/to/compiler/bin"
-prefix = "riscv64-unknown-elf-"
-flags = "-march=rv64imafd -mabi=lp64d -mcmodel=medany"
+path = /path/to/compiler     # path to the compler location if not in PATH
+prefix = riscv64-unknown-elf # prefix of the compiler if not gcc or g++
+flags = {-march=rv64imafd, -mabi=lp64d, -mcmodel=medany} # list of compiler flags
 
-# This section descrives the required dependencies to build the project
-[depend]
+[depend] # section that defines dependencies
+         # executed in first place when building
+bruc = {repo, git...}
+bruc2 = {path, ../..}
 
-project1 = {path, /path/to/project1}
-project2 = {repo, https://git.com/user/repo} # TODO, master}
-project3 = {repo, git@git.com:user/rep} # TODO, dev}
+flags = {-DDEBUG=1, -DNPRINT} # List of flags to pass to all dependencies
+dir = .repos   # Path to directory where to download dependencies
+script = /path/to/script # Path to script to execute before downloading dependencies
 
-flags = "-DDEBUG=1" # Flags to be used when building dependencies
+[build]  # section that defines the build
+         # executed both as main and as dependency
 
-# This section provides information for projects that have this as dependency
+dir = build # Directory where the build files are stored
+flags = {-DTYPE=float} # Flags to use when bulding
+sources = {src/main.c, utils/src/Class.cpp, extra/tools.S} # List of files to compile
+script = /path/to/script # Path to script to execute before building
 
-[export] 
+[link]
 
-flags = "--std=c++11" # Flags that are required for projects using this project
-includes = {/path/to/project/export/includes} # include directories to export
+dir = bin # Directory where the output is stored
+flags = {-Tlink.ld, -static} # Flags used when linking the project
+target = project.exe # Output of the project
+script = /path/to/script # Path to script to execute before linking
 
-[project]
+[export] # section that defines how to use this as dependency
+         # executed last when building
 
-name = "MyProject"
+includes = {includes} # list of includes
+flags = {flag1, flag2, flag3} # list of flags
 
-targets = {bin/project.exe, lib/libproject.a}
+[install] # section that defines install information
+          # only executed by the root if the section exists
 
-flags = "-DTYPE=float" # Flags used for building this project
-includes = {include/, utils/include}
-sources = {src/main.c, utils/src/Class.cpp, extra/tools.S} # Wildcard not supported
-link = "-Tlink.ld -Wl,static" # Flags to be used when linking (linking is done usign g++)
-
-[dirs]
-build = "build"
-install = "/opt"
-repos = ".bosc/repos" # Path were to download the dependencies
+path = "/opt/project" # Path were to install the project
+script = /path/to/script # Path to script to execute before linking
 
 
 ```
