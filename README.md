@@ -1,6 +1,9 @@
 # BOSC - Build Orginization and Script in Cascade
 
 ## TODO
+- First download deps, then build
+- Install path, require dir name (not use project)
+- Default install path "."
 - arguments
 - clean code
 - Automatic linker (ld if pure c, g++ if c++)
