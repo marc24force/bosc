@@ -45,12 +45,24 @@ int Bosc::get_dep_path(fs::path& path, std::string name) {
 		path = _repos / name;
 		if (!std::filesystem::exists(path)) {
 			std::cout << "- Cloning repository: " << dep_line[1] << "\n";
-			std::string cmd = "git clone " + dep_line[1] + " " + path.string();
+			std::string cmd = "git clone --quiet " + dep_line[1] + " " + path.string();
 			if (std::system(cmd.c_str())) {
 				std::cerr << "Error: Couldn't clone repository\n";
 				return 1;
 			}
 		}
+	}
+	return 0;
+}
+
+int Bosc::download_all() {
+	std::vector<std::string> deps = b.getKeys("depend");
+	for (auto& d : deps) {
+            fs::path dir; 
+            if (get_dep_path(dir, d)) return 1;
+            Bosc child(dir, this);
+            if (child.load_bruc()) return 1;
+            if (child.download_all()) return 1;
 	}
 	return 0;
 }
@@ -100,6 +112,8 @@ int Bosc::build(bool install) {
 	}
 
 	// Dependencies
+	download_all();
+
 	std::vector<std::string> deps = b.getKeys("depend");
 	for (auto& d : deps) {
 		if (build_dependency(d)) return 1;

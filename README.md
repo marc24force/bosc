@@ -30,7 +30,7 @@ path = /path/to/compiler     # path to the compler location if not in PATH
 prefix = riscv64-unknown-elf # prefix of the compiler if not gcc or g++
 flags = {-march=rv64imafd, -mabi=lp64d, -mcmodel=medany} # list of compiler flags
 
-[depend] # section that defines dependencies
+[import] # section that defines dependencies
          # executed in first place when building
 bruc = {repo, git...}
 bruc2 = {path, ../..}

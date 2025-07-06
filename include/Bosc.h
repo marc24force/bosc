@@ -10,41 +10,65 @@ namespace fs {
 	using list = std::vector<path>;
 }
 
-//namespace fs = std::filesystem;
 
 class Bosc {
 	private:
-		// Local variables
-		Bruc b;
-		fs::path dir_local;
-		bool is_root;
-		std::string depend_flags_local;
-		std::string depend_flags_parent;
-
 		// Structs
 		struct Compiler {
 			fs::path path; 
-			std::string prefix;
-			std::string flags;
+                        fs::path prefix;
+                        std::string flags;
 		};
+
+		struct Import {
+                	fs::list child;
+                        fs::path dir;
+                        std::string flags;
+                        fs::path script;
+                };
+
+                struct Build {
+                	fs::path dir;
+                        std::string flags;
+                        fs::list srcs;
+                        fs::path script;
+                };
+
+                struct Link {
+                	fs::path dir;
+                        std::string flags;
+                        fs::path target;
+                        fs::path script;
+                }
 
 		struct Export {
+			fs::list incs;
 			std::string flags;
-			fs::list includes;
-			fs::list lpaths;
-			std::vector<std::string> lnames;
 		};
 
-		// Static variables
-		static fs::path _repos;
-		static Compiler _compiler;
-		static Export _export;
+		struct Install {
+			fs::path path;
+                        fs::path script;
+                };
+			
+		// Local variables
+		Compiler _compiler;
+		Import _import;
+		Build _build;
+		Link _link;
+		Export _export;
+		Install _install;
+
+		Bruc b;
+		Bosc* parent;
+
 
 		// Utility functions
 		int load_bruc();
 		fs::path make_absolute(fs::path p);
 		int create_dir(fs::path dir);
 		int get_dep_path(fs::path& path, std::string name);
+		int download_all();
 		int build_dependency(std::string name);
 		bool is_older(fs::path p1, fs::path p2);
 
