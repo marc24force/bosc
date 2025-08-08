@@ -1,78 +1,121 @@
 # BOSC - Build Orginization and Script in Cascade
 
-## TODO
-- First download deps, then build
-- Install path, require dir name (not use project)
-- Default install path "."
-- arguments
-- clean code
-- Automatic linker (ld if pure c, g++ if c++)
-- Append -Wl to linker flags if c++
-- scripts depend, build and install
+Bosc is a build system for C/C++ projects that manages dependencies, builds, installs, and cleans projects using a `bosc.ini` configuration file.
 
-## Install
+It uses [Ciri](https://github.com/marc24force/ciri.git) for parsing the ini files.
+See `Configuration` for the characteristics of using Ciri.
 
-Set the install directory by modifying the bosc.bruc file. 
-Depending on the target directory the install command will require sudo.
+## Features
 
-```bash
-make
-./make_bosc.exe install
+* Manage project dependencies (git repos or local paths)
+* Manage different project builds depending on the compiler and flags used
+* Supports command-line flags for verbosity, recursion, and project selection
+* Use arguments and cross-references inside `bosc.ini`
+
+## Usage
+
+```
+bosc [flags] <cmd> [args]
 ```
 
-## Example
+### Commands
+
+* `import`: Download dependencies
+* `build`: Build project and dependencies
+* `install`: Install project
+* `uninstall`: Uninstall project
+* `clean`: Clean current build
+* `purge`: Clean all builds
+* `remove`: Remove project entry and delete repository if applicable
+
+### Flags
+
+* `-v`, `--verbose`: Enable verbose output
+* `-r`, `--recursive`: Use with `clean`, `purge`, `remove` for recursive action
+* `-p project`, `--project=project`: Specify project for `clean`, `purge`, `remove`
+* `-h`, `--help`: Show help message
+
+## Configuration - bosc.ini
+
+The `bosc.ini` file controls project settings and must be placed in the root project directory.
+
+### Sections and Keys
+
+* **\[import]**
+  Define dependencies:
+  `dep = {repo, git-url [, version [, config.ini]]}` or `{path, local-path}` (list)
+
+* **\[compiler]**
+  `path` (string): compiler executable
+  `prefix` (string): compiler prefix
+  `flags` (list): flags affecting build hash
+
+* **\[build]**
+
+  `flags` (list): generic build flags
+  `cflags` (list): C-specific flags
+  `cppflags` (list): C++-specific flags
+  `ldflags` (list): linker flags
+  `src` (list): source files
+  `include` (list): include directories
+  `target` (string): output binary or library
+
+* **\[install]**
+  `path` (string): installation directory
+  Note: a subdirectory named after the project (taken from the root folder name) will be created inside this path
+
+* **\[export]**
+  `include` (list): headers and include paths for dependent projects
+
+### Features
+
+* Command-line arguments accessible via `$(1)`, `$(2)`, etc. inside values
+* Cross-references within the file using `${section=value}` syntax
+
+### File Format
+
+* Sections: [name]
+* Key-value pairs: `key = value`
+* Values can be strings or lists (`{item1, item2, ...}`)
+* Comments:
+
+  * Lines starting with `#` are full-line comments
+  * Semicolons `;` start comments after an entry on the same line
+
+## Building
+
+Ciri is a required dependency. When running `make`, specify its path with:
+
+```
+make CIRI=path/to/ciri/
+```
+
+The provided `Makefile` builds Bosc with double redundancy: it compiles the tool, then uses it to compile itself once more to ensure reproducible builds.
+
+## Example bosc.ini
+
 ```ini
+[import]
+projectA = {repo, git@git.com:user/projectA.git}
+projectB = {path, ../localdep/projectB}
 
-[compiler] # section that defines the compiler used
-           # only executed in the root project and shared with all dependencies
+[compiler]
+path = /usr/bin/gcc
+prefix = riscv64-unknown-elf-
+flags = {-march=rv64imafd, -mabi=lp64d}
 
-path = /path/to/compiler     # path to the compler location if not in PATH
-prefix = riscv64-unknown-elf # prefix of the compiler if not gcc or g++
-flags = {-march=rv64imafd, -mabi=lp64d, -mcmodel=medany} # list of compiler flags
+[build]
+flags = {-DENABLE_FEATURE}
+cflags = {-std=c17}
+cppflags = {-std=c++17}
+ldflags = {-Tlink.ld, -static}
+src = {src/main.c, utils/src/Class.cpp}
+include = {include, utils/include}
+target = bin/project.exe
 
-[import] # section that defines dependencies
-         # executed in first place when building
-bruc = {repo, git...}
-bruc2 = {path, ../..}
+[install]
+path = /opt
 
-flags = {-DDEBUG=1, -DNPRINT} # List of flags to pass to all dependencies
-dir = .repos   # Path to directory where to download dependencies
-script = /path/to/script # Path to script to execute before downloading dependencies
+[export]
+include = {include/, extra/include}
 
-[build]  # section that defines the build
-         # executed both as main and as dependency
-
-dir = build # Directory where the build files are stored
-flags = {-DTYPE=float} # Flags to use when bulding
-sources = {src/main.c, utils/src/Class.cpp, extra/tools.S} # List of files to compile
-script = /path/to/script # Path to script to execute before building
-
-[link]
-
-dir = bin # Directory where the output is stored
-flags = {-Tlink.ld, -static} # Flags used when linking the project
-target = project.exe # Output of the project
-script = /path/to/script # Path to script to execute before linking
-
-[export] # section that defines how to use this as dependency
-         # executed last when building
-
-includes = {includes} # list of includes
-flags = {flag1, flag2, flag3} # list of flags
-
-[install] # section that defines install information
-          # only executed by the root if the section exists
-
-path = "/opt/project" # Path were to install the project
-script = /path/to/script # Path to script to execute before linking
-
-
-```
-
-```bash
-bosc build ARGS     # builds the project
-bosc install ARGS   # installs the project
-bosc clean ARGS     # cleans the project
-bosc clean-all ARGS # cleans the project and dependencies
-bosc purge ARGS     # clean-all + removes git repositories downloaded
-```

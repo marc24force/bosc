@@ -1,29 +1,37 @@
-SRC := $(wildcard src/*.cpp)
-OBJ := $(patsubst src/%.cpp, make_build/%.o, $(SRC))
+CIRI ?= ../ciri
 
-BRUC := .bosc/bruc
+ifeq ($(OS),Windows_NT)
+    RM = del /Q
+    SEP = \\
+else
+    RM = rm -f
+    SEP = /
+endif
 
-CXX := g++
-CXXFLAGS := -Wall -O3 -I$(BRUC)/include -Iinclude
-OUT := make_bosc.exe
+CXXFLAGS = -std=c++20 -Wall -Iinclude -I$(CIRI)/include -I$(CIRI)/inih/cpp 
+LDFLAGS = $(CIRI)/build/libciri.a -Wl,--gc-sections
+SRC = src/main.cpp src/Bosc.cpp
+OBJ = $(SRC:.cpp=.o)
+TARGET = bosc
 
-all: $(OUT)
+all: run
 
-$(BRUC)/lib/libbruc.a: 
-	-git clone https://github.com/marc24force/bruc.git $(BRUC)
-	$(MAKE) -C $(BRUC)
+$(TARGET): ciri $(OBJ)
+	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
 
+.PHONY: ciri
+ciri: 
+	$(MAKE) -C $(CIRI)
 
-$(OUT): $(BRUC)/lib/libbruc.a $(OBJ) 
-	$(CXX) $(CXXFLAGS) $(OBJ) -L$(BRUC)/lib -lbruc -o $@
-
-make_build/%.o: src/%.cpp
-	@mkdir -p make_build
+%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-clean:
-	rm -rf make_build $(OUT)
+run: $(TARGET)
+	./$(TARGET) build
+	@$(eval BUILD_DIR := $(shell echo build-*))
+	@./$(BUILD_DIR)$(SEP)bin$(SEP)bosc install
+	@$(RM) $(OBJ) $(TARGET)
 
-clean-all: clean
-	rm -rf $(BRUC)
+clean:
+	$(RM) $(OBJ) $(TARGET)
 
