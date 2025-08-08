@@ -189,9 +189,10 @@ void Bosc::import() {
 }
 
 
-void Bosc::build() {
+bool Bosc::build() {
+	bool dirty = false;
 	// Build dependencies
-	for (auto& c: _child) c.build();
+	for (auto& c: _child) dirty |= c.build();
 
 	// Create build dir if it doesn't exist
 	fs::path pdir = fs::path(_config.File()).parent_path();
@@ -220,8 +221,6 @@ void Bosc::build() {
 	std::string objs;
 	std::string cmd;
 
-	bool rebuild = false;
-
 	static const std::unordered_set<std::string> exts{".c", ".s", ".S"};
 	for (auto& f : _config.GetStringList("build", "src", {})) {
 		fs::path file = fs::path(f);
@@ -238,7 +237,7 @@ void Bosc::build() {
 			_namespace = _name;
 		}
 		std::cout << " - Building " << file.stem().string() << "\n";
-		rebuild = true;
+		dirty = true;
 		cmd = compiler + "-c " + file.string() + " -o " + out.string() + " " + fflags + " " + incl;
 		if (_verbose) std::cout << cmd << "\n";
 		int res = std::system(cmd.c_str());
@@ -261,7 +260,7 @@ void Bosc::build() {
 		cmd = gpp + " " + objs + " -o " + target.string() + " " + ldflags + _libs;
 	}
 
-	if (rebuild) {
+	if (dirty) {
 		if (_namespace != _name) {
 			std::cout << "[" << _name << "]" << "\n";
 			_namespace = _name;
@@ -274,6 +273,8 @@ void Bosc::build() {
 
 	// Export
 	_exports += imports + list_to_string(_config.GetStringList("export", "include", {}), std::string("-I") + pdir.string() + fs::path::preferred_separator);
+
+	return dirty;
 }
 
 void Bosc::install() {

@@ -20,8 +20,9 @@ class Bosc {
 		void import();
 		
 		// build: Builds all project dependencies before building itself.
+		// return: True if build updated, false if nothing done.
 		// Fail: Throws if an error occurs during build.
-		void build();
+		bool build();
 
 		// install: Installs the current build.
 		// Fail: Throws if an error occurs when installing.

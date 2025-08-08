@@ -27,9 +27,7 @@ ciri:
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 run: $(TARGET)
-	./$(TARGET) build
-	@$(eval BUILD_DIR := $(shell echo build-*))
-	@./$(BUILD_DIR)$(SEP)bin$(SEP)bosc install
+	./$(TARGET) install
 	@$(RM) $(OBJ) $(TARGET)
 
 clean:
