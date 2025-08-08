@@ -42,30 +42,31 @@ The `bosc.ini` file controls project settings and must be placed in the root pro
 ### Sections and Keys
 
 * **\[import]**
+
   Define dependencies:
-  `dep = {repo, git-url [, version [, config.ini]]}` or `{path, local-path}` (list)
+  * `dep = {repo, git-url [, version [, config.ini]]}`
+  * `dep = {path, local-path}`
 
 * **\[compiler]**
-  `path` (string): compiler executable
-  `prefix` (string): compiler prefix
-  `flags` (list): flags affecting build hash
+  * `path` (string): compiler executable
+  * `prefix` (string): compiler prefix
+  * `flags` (list): flags affecting build hash
 
 * **\[build]**
-
-  `flags` (list): generic build flags
-  `cflags` (list): C-specific flags
-  `cppflags` (list): C++-specific flags
-  `ldflags` (list): linker flags
-  `src` (list): source files
-  `include` (list): include directories
-  `target` (string): output binary or library
+  * `flags` (list): generic build flags
+  * `cflags` (list): C-specific flags
+  * `cppflags` (list): C++-specific flags
+  * `ldflags` (list): linker flags
+  * `src` (list): source files
+  * `include` (list): include directories
+  * `target` (string): output binary or library
 
 * **\[install]**
-  `path` (string): installation directory
-  Note: a subdirectory named after the project (taken from the root folder name) will be created inside this path
+  * `path` (string): installation directory
+  *Note: a subdirectory named after the project (taken from the root folder name) will be created inside this path*
 
 * **\[export]**
-  `include` (list): headers and include paths for dependent projects
+  * `include` (list): headers and include paths for dependent projects
 
 ### Features
 
