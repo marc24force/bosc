@@ -188,16 +188,61 @@ void Bosc::import() {
 
 }
 
+bool Bosc::run_hook(const std::string& stage) {
+	if (_config.HasValue(stage, "hook")) {
+		if (_namespace != _name) {
+			std::cout << "[" << _name << "]" << "\n";
+			_namespace = _name;
+		}
+		std::cout << " - Running pre-" << stage <<" hooks\n";
+	}
+	for (const auto& hook : _config.GetStringList(stage, "hook", {})) {
+		std::string quiet = _verbose ? "" : " > /dev/null 2>&1";
+		if (_verbose) std::cout << hook << "\n";
+		int res = std::system((hook + quiet).c_str());
+		if (res != 0) throw std::runtime_error("Pre-" + stage + " hook '" + hook + "' failed");
+	}
+	return true;
+}
 
 bool Bosc::build() {
 	bool dirty = false;
+
 	// Build dependencies
 	for (auto& c: _child) dirty |= c.build();
-
+	
 	// Create build dir if it doesn't exist
 	fs::path pdir = fs::path(_config.File()).parent_path();
 	fs::path bdir = pdir / ("build-" + _hash);
 	fs::create_directories(bdir);
+	const fs::path target = bdir / _config.GetString("build", "target", _name);
+
+	dirty |= !fs::exists(target); // If not bulid is also dirty
+
+	// Check if build is dirty (a source is more recent than the target)
+	for (auto& f : _config.GetStringList("build", "src", {})) {
+		fs::path file = fs::path(f);
+		file = pdir / file;
+		if (valid_obj(target, file)) continue;
+		dirty = true;
+		break;
+	}
+
+	if (dirty && _config.HasValue("build", "hook")) {
+		if (_namespace != _name) {
+			std::cout << "[" << _name << "]" << "\n";
+			_namespace = _name;
+		}
+		std::cout << " - Running pre-build hooks\n";
+		for (const auto& hook : _config.GetStringList("build", "hook", {})) {
+			std::string quiet = _verbose ? "" : " > /dev/null 2>&1";
+			if (_verbose) std::cout << hook << "\n";
+			int res = std::system((hook + quiet).c_str());
+			if (res != 0) throw std::runtime_error("Pre-build hook '" + hook + "' failed");
+		}
+	}
+
+
 	const std::string gcc = std::vformat(_compiler, std::make_format_args("gcc"));
 	const std::string gpp = std::vformat(_compiler, std::make_format_args("g++"));
 	const std::string ar = [&] {
@@ -245,7 +290,6 @@ bool Bosc::build() {
 	}
 
 	const std::string ldflags = list_to_string(_config.GetStringList("build", "ldflags", {}), "-Wl,");
-	const fs::path target = bdir / _config.GetString("build", "target", _name);
 
 	fs::create_directories(target.parent_path());
 

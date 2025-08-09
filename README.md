@@ -53,6 +53,7 @@ The `bosc.ini` file controls project settings and must be placed in the root pro
   * `flags` (list): flags affecting build hash
 
 * **\[build]**
+  * `hook` (list): list of commands to run before building
   * `flags` (list): generic build flags
   * `cflags` (list): C-specific flags
   * `cppflags` (list): C++-specific flags

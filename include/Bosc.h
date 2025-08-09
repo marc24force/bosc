@@ -20,7 +20,7 @@ class Bosc {
 		void import();
 		
 		// build: Builds all project dependencies before building itself.
-		// return: True if build updated, false if nothing done.
+		// Return: True if build updated, false if nothing done.
 		// Fail: Throws if an error occurs during build.
 		bool build();
 
@@ -89,5 +89,14 @@ class Bosc {
 
 		// Libs used + own
 		std::string _libs;
+
+
+		/* Helper functions */
+
+		// run_hook: Executes the pre-stage hook.
+		// Args: String indicating the stage to hook.
+		// Return: True on success
+		// Fail: Throws if the hooks terminates with non 0 return.
+		bool run_hook(const std::string& stage);
 };
 
