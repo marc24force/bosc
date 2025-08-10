@@ -356,7 +356,7 @@ void Bosc::uninstall() {
 			std::cout << "[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
-		std::cout << "Nothing to do.\n";
+		std::cout << "Nothing to uninstall\n";
 	}
 }
 
@@ -436,6 +436,7 @@ void Bosc::remove(bool recursive) {
 		}
 		std::cout << " - Removing " << _name << " git directory\n";
 		if(_verbose) std::cout << "Deleting '" << pdir.string() <<"'\n";
+		remove_path(pdir);
 	}
 
 }
