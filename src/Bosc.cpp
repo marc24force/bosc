@@ -1,5 +1,6 @@
 #include "Bosc.h"
 #include <iostream>
+#include <unistd.h>
 #include <unordered_set>
 #include <format>
 #include <fstream>
@@ -19,13 +20,6 @@ void create_file(const fs::path& file) {
 void remove_path(const fs::path& p) {
 	if (fs::remove_all(p) == 0) 
 		throw std::runtime_error(p.string() + " does not exist or cannot be removed");
-	
-}
-
-void copy_path(const fs::path& from, const fs::path& to) {
-	if (fs::is_directory(from)) 
-		fs::copy(from, to, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
-	else fs::copy_file(from, to / from.filename(), fs::copy_options::overwrite_existing);
 	
 }
 
@@ -338,14 +332,26 @@ void Bosc::install() {
 #endif
 	fs::path src = bdir / target;
 	fs::path idir = (fs::path(_config.GetString("install", "path", "")) / _name) / target.parent_path();
-	fs::create_directories(idir);
 	if (_namespace != _name) {
 		std::cout << "\n[" << _name << "]" << "\n";
 		_namespace = _name;
 	}
 	std::cout << " - Installing " << _name << "\n";
 	if (_verbose) std::cout << "Copying '" << src.string() << "' to '" << idir.string() << "'\n";
-	copy_path(src, idir);
+	if (access(idir.c_str(), W_OK) != 0) {
+		std::string cmd = std::string("sudo mkdir -p ") + idir.string();
+		if (_verbose) std::cout << cmd << "\n";
+		int res = std::system(cmd.c_str());
+		if (res != 0) throw std::runtime_error("Creation of " + idir.string() + " failed");
+		cmd = std::string("sudo cp ") + src.string() + " " + idir.string();
+		if (_verbose) std::cout << cmd << "\n";
+		res = std::system(cmd.c_str());
+		if (res != 0) throw std::runtime_error("Copy of " + src.string() + " to " + idir.string() + " failed");
+	} else {
+		fs::create_directories(idir);
+		fs::copy(src, idir, fs::copy_options::overwrite_existing);
+	}
+
 }
 
 void Bosc::uninstall() {
@@ -359,7 +365,12 @@ void Bosc::uninstall() {
 
 
 		if (_verbose) std::cout << "Removing '" << idir.string() << "'\n";
-		remove_path(idir);
+		if (access(idir.c_str(), W_OK) != 0) {
+			std::string cmd = std::string("sudo rm -r ") + idir.string();
+			if (_verbose) std::cout << cmd << "\n";
+			int res = std::system(cmd.c_str());
+			if (res != 0) throw std::runtime_error("Failed to remove " + idir.string());
+		} else remove_path(idir);
 	} else if (_verbose) {
 		if (_namespace != _name) {
 			std::cout << "\n[" << _name << "]" << "\n";
