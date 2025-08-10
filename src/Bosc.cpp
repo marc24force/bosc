@@ -67,7 +67,6 @@ std::string Bosc::_hash = "";
 
 // Initialize projects file
 Ciri Bosc::_projects([]{
-		std::cout << "lambda\n";
 		// Open the projects file
 		std::string bsc = []{ 
 			const char* v = std::getenv("BOSC_ROOT");
