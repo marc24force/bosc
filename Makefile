@@ -1,4 +1,12 @@
-CIRI ?= ../ciri
+ifdef BOSC_ROOT
+	BOSC_DIR := $(BOSC_ROOT)
+else ifdef XDG_DATA_HOME
+	BOSC_DIR := $(XDG_DATA_HOME)/bosc
+else 
+	BOSC_DIR := $(HOME)/.local/bosc
+endif
+
+CIRI = $(BOSC_DIR)/ciri
 
 ifeq ($(OS),Windows_NT)
     RM = del /Q
@@ -17,17 +25,27 @@ TARGET = bosc
 all: run
 
 $(TARGET): ciri $(OBJ)
-	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
+	@echo " - Building bosc"
+	@$(CXX) $(OBJ) -o $@ $(LDFLAGS)
 
 .PHONY: ciri
 ciri: 
-	$(MAKE) -C $(CIRI)
+	@echo "[Makefile]"
+	@echo " - Downloading ciri"
+	@[ -d "$(CIRI)/.git" ] || git clone --quiet --recursive https://github.com/marc24force/ciri.git $(CIRI)
+	@echo " - Building ciri"
+	@$(MAKE) --no-print-directory -s -C $(CIRI) 
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 run: $(TARGET)
-	./$(TARGET) install
+	@echo "Build finished! Rebuilding with bosc\n"
+	@./$(TARGET) install
+	@echo "\n[Makefile]"
+	@echo " - Cleaning non-bosc ciri build"
+	@$(MAKE) --no-print-directory -s -C $(CIRI) clean
+	@echo " - Cleaning non-bosc bosc build"
 	@$(RM) $(OBJ) $(TARGET)
 
 clean:
