@@ -117,7 +117,7 @@ void Bosc::import() {
 		if(_projects.HasValue(key, "path")) { // Project already downloaded
 			if (_verbose) {
 				if (_namespace != _name) {
-					std::cout << "[" << _name << "]" << "\n";
+					std::cout << "\n[" << _name << "]" << "\n";
 					_namespace = _name;
 				}
 				std::cout << "Import '" + key + "' found in '" + _projects.GetString(key, "path", "") + "'\n";
@@ -137,10 +137,10 @@ void Bosc::import() {
 
 			if (!fs::exists(dir)) {
 				if (_namespace != _name) {
-					std::cout << "[" << _name << "]" << "\n";
+					std::cout << "\n[" << _name << "]" << "\n";
 					_namespace = _name;
 				}
-				std::cout << "- Downloading " << key << "\n";
+				std::cout << " - Downloading " << key << "\n";
 
 				std::string cmd = "git clone " + std::string(_verbose ? "" : "-q ") + target + " " + dir.string();
 				// If a version is passed checkout to that
@@ -168,7 +168,7 @@ void Bosc::import() {
 			dir = fs::canonical(target);
 			if (_verbose) {
 				if (_namespace != _name) {
-					std::cout << "[" << _name << "]" << "\n";
+					std::cout << "\n[" << _name << "]" << "\n";
 					_namespace = _name;
 				}
 				std::cout << "Using path " << dir << " for " << key << "\n";
@@ -200,7 +200,7 @@ void Bosc::import() {
 bool Bosc::run_hook(const std::string& stage) {
 	if (_config.HasValue(stage, "hook")) {
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << " - Running pre-" << stage <<" hooks\n";
@@ -239,7 +239,7 @@ bool Bosc::build() {
 
 	if (dirty && _config.HasValue("build", "hook")) {
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << " - Running pre-build hooks\n";
@@ -287,7 +287,7 @@ bool Bosc::build() {
 		file = pdir / file;
 		if (valid_obj(out, file)) continue;
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << " - Building " << file.stem().string() << "\n";
@@ -315,7 +315,7 @@ bool Bosc::build() {
 
 	if (dirty) {
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << msg << "\n";
@@ -340,7 +340,7 @@ void Bosc::install() {
 	fs::path idir = (fs::path(_config.GetString("install", "path", "")) / _name) / target.parent_path();
 	fs::create_directories(idir);
 	if (_namespace != _name) {
-		std::cout << "[" << _name << "]" << "\n";
+		std::cout << "\n[" << _name << "]" << "\n";
 		_namespace = _name;
 	}
 	std::cout << " - Installing " << _name << "\n";
@@ -352,7 +352,7 @@ void Bosc::uninstall() {
 	fs::path idir = fs::path(_config.GetString("install", "path", "")) / _name;
 	if (fs::exists(idir) && _config.HasValue("install", "path")) {
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << " - Uninstalling " << _name << "\n";
@@ -362,7 +362,7 @@ void Bosc::uninstall() {
 		remove_path(idir);
 	} else if (_verbose) {
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << "Nothing to uninstall\n";
@@ -378,7 +378,7 @@ void Bosc::clean(bool recursive) {
 	if (!fs::exists(bdir)) {
 		if (_verbose)  {
 			if (_namespace != _name) {
-				std::cout << "[" << _name << "]" << "\n";
+				std::cout << "\n[" << _name << "]" << "\n";
 				_namespace = _name;
 			}
 			std::cout << "Build already cleaned\n";
@@ -387,7 +387,7 @@ void Bosc::clean(bool recursive) {
 	}
 
 	if (_namespace != _name) {
-		std::cout << "[" << _name << "]" << "\n";
+		std::cout << "\n[" << _name << "]" << "\n";
 		_namespace = _name;
 	}
 	std::cout << " - Cleaning build '" << _hash <<"'\n";
@@ -417,7 +417,7 @@ void Bosc::purge(bool recursive) {
 	for (const auto& hash : hashes) {
 		fs::path bdir = pdir / ("build-" + hash);
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << " - Cleaning build '" << hash <<"'\n";
@@ -440,7 +440,7 @@ void Bosc::remove(bool recursive) {
 
 	if (is_subdir(fs::path(_projects.File()).parent_path(), pdir)) {
 		if (_namespace != _name) {
-			std::cout << "[" << _name << "]" << "\n";
+			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
 		}
 		std::cout << " - Removing " << _name << " git directory\n";

@@ -126,6 +126,8 @@ int main(int argc, char* argv[]) {
 		std::cerr << "\n-- ERROR -- \n" << e.what() << "\n";
 		return EXIT_FAILURE;
 	}
+
+	std::cout << "\nDone!\n";
 	return EXIT_SUCCESS;
 }
 
