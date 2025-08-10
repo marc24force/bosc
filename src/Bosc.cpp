@@ -327,9 +327,6 @@ bool Bosc::build() {
 void Bosc::install() {
 	fs::path bdir = fs::path(_config.File()).parent_path() / ("build-" + _hash);
 	fs::path target = fs::path(_config.GetString("build", "target", _name));
-#ifdef _WIN32
-	if (!target.has_extension()) target += ".exe";
-#endif
 	fs::path src = bdir / target;
 	fs::path idir = (fs::path(_config.GetString("install", "path", "")) / _name) / target.parent_path();
 	if (_namespace != _name) {
