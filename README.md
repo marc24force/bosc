@@ -86,12 +86,6 @@ The `bosc.ini` file controls project settings and must be placed in the root pro
 
 ## Building
 
-Ciri is a required dependency. When running `make`, specify its path with:
-
-```
-make CIRI=path/to/ciri/
-```
-
 The provided `Makefile` builds Bosc with double redundancy: it compiles the tool, then uses it to compile itself once more to ensure reproducible builds.
 
 ## Example bosc.ini
