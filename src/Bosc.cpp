@@ -67,11 +67,21 @@ std::string Bosc::_hash = "";
 
 // Initialize projects file
 Ciri Bosc::_projects([]{
+		std::cout << "lambda\n";
 		// Open the projects file
-		const char* bsc = std::getenv("BOSC_DIR");
-		const char* xdg = std::getenv("XDG_DATA_HOME");
-		std::string home = std::string(std::getenv("HOME")) + "/.local";
-		std::string bosc = (bsc ? bsc : (xdg ? xdg : home)) + "/bosc/.projects.ini";
+		std::string bsc = []{ 
+			const char* v = std::getenv("BOSC_ROOT");
+			return v ? (std::string(v) + "/.projects.ini") : "";
+		}();
+		std::string xdg = []{ 
+			const char* v = std::getenv("XDG_DATA_HOME");
+			return v ? (std::string(v) + "/bosc/.projects.ini") : "";
+		}();
+		std::string home = []{ 
+			const char* v = std::getenv("HOME");
+			return v ? (std::string(v) + "/.local/bosc/.projects.ini") : "";
+		}();
+		std::string bosc = (!bsc.empty() ? bsc : (!xdg.empty() ? xdg : home));
 		create_file(fs::path(bosc));
 		return bosc;
 		}()) ;
