@@ -216,16 +216,16 @@ bool Bosc::build() {
 	
 	// Create build dir if it doesn't exist
 	fs::path pdir = fs::path(_config.File()).parent_path();
-	fs::path bdir = pdir / ("build-" + _hash);
+	fs::path bdir = fs::weakly_canonical(pdir / ("build-" + _hash));
 	fs::create_directories(bdir);
-	const fs::path target = bdir / _config.GetString("build", "target", _name);
+	const fs::path target = fs::weakly_canonical(bdir / _config.GetString("build", "target", _name));
 
 	dirty |= !fs::exists(target); // If not bulid is also dirty
 
 	// Check if build is dirty (a source is more recent than the target)
 	for (auto& f : _config.GetStringList("build", "src", {})) {
 		fs::path file = fs::path(f);
-		file = pdir / file;
+		file = fs::weakly_canonical(pdir / file);
 		if (valid_obj(target, file)) continue;
 		dirty = true;
 		break;
@@ -239,8 +239,9 @@ bool Bosc::build() {
 		std::cout << " - Running pre-build hooks\n";
 		for (const auto& hook : _config.GetStringList("build", "hook", {})) {
 			std::string quiet = _verbose ? "" : " > /dev/null 2>&1";
-			if (_verbose) std::cout << hook << "\n";
-			int res = std::system((hook + quiet).c_str());
+			std::string cd = std::string("cd ") + pdir.string() + " && ";
+			if (_verbose) std::cout << cd << hook << "\n";
+			int res = std::system((cd + hook + quiet).c_str());
 			if (res != 0) throw std::runtime_error("Pre-build hook '" + hook + "' failed");
 		}
 	}
@@ -268,17 +269,16 @@ bool Bosc::build() {
 
 	std::string objs;
 	std::string cmd;
-
 	static const std::unordered_set<std::string> exts{".c", ".s", ".S"};
 	for (auto& f : _config.GetStringList("build", "src", {})) {
-		fs::path file = fs::path(f);
+		fs::path file =  fs::path(f);
 		const std::string compiler = (exts.count(file.extension().string()) > 0) ? gcc : gpp;
 		const std::string fflags = flags + ((exts.count(file.extension().string()) > 0) ? cflags : cppflags);
-		fs::path out = bdir / file;
+		fs::path out = fs::weakly_canonical(bdir / file) ;
 		fs::create_directories(out.parent_path());
-		out.replace_extension(".o");
+		out += ".o";
 		objs += out.string() + " ";
-		file = pdir / file;
+		file = fs::weakly_canonical(pdir / file);
 		if (valid_obj(out, file)) continue;
 		if (_namespace != _name) {
 			std::cout << "\n[" << _name << "]" << "\n";
@@ -327,15 +327,16 @@ bool Bosc::build() {
 void Bosc::install() {
 	fs::path bdir = fs::path(_config.File()).parent_path() / ("build-" + _hash);
 	fs::path target = fs::path(_config.GetString("build", "target", _name));
-	fs::path src = bdir / target;
+	fs::path src = fs::weakly_canonical(bdir / target);
 	fs::path idir = (fs::path(_config.GetString("install", "path", "")) / _name) / target.parent_path();
+
 	if (_namespace != _name) {
 		std::cout << "\n[" << _name << "]" << "\n";
 		_namespace = _name;
 	}
 	std::cout << " - Installing " << _name << "\n";
 	if (_verbose) std::cout << "Copying '" << src.string() << "' to '" << idir.string() << "'\n";
-	if (access(idir.c_str(), W_OK) != 0) {
+	if (access(_config.GetString("install", "path", "").c_str(), W_OK) != 0) {
 		std::string cmd = std::string("sudo mkdir -p ") + idir.string();
 		if (_verbose) std::cout << cmd << "\n";
 		int res = std::system(cmd.c_str());
@@ -381,7 +382,7 @@ void Bosc::clean(bool recursive) {
 	if (recursive) for (auto& c: _child) c.clean(recursive);
 
 	fs::path pdir = fs::path(_config.File()).parent_path();
-	fs::path bdir = pdir / ("build-" + _hash);
+	fs::path bdir = fs::weakly_canonical(pdir / ("build-" + _hash));
 
 	if (!fs::exists(bdir)) {
 		if (_verbose)  {
@@ -423,7 +424,7 @@ void Bosc::purge(bool recursive) {
 	}
 
 	for (const auto& hash : hashes) {
-		fs::path bdir = pdir / ("build-" + hash);
+		fs::path bdir = fs::weakly_canonical(pdir / ("build-" + hash));
 		if (_namespace != _name) {
 			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;

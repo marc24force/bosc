@@ -16,7 +16,8 @@ else
     SEP = /
 endif
 
-CXXFLAGS = -std=c++20 -Wall -Iinclude -I$(CIRI)/include -I$(CIRI)/inih/cpp 
+
+CXXFLAGS =-O3 -std=c++20 -Wall -Iinclude -I$(CIRI)/include -I$(CIRI)/inih/cpp
 LDFLAGS = $(CIRI)/build/libciri.a -Wl,--gc-sections
 SRC = src/main.cpp src/Bosc.cpp
 OBJ = $(SRC:.cpp=.o)
