@@ -307,7 +307,7 @@ bool Bosc::build() {
 		cmd = gpp + " " + objs + " -o " + target.string() + " " + ldflags + _libs;
 	}
 
-	if (dirty) {
+	if (dirty && !objs.empty()) {
 		if (_namespace != _name) {
 			std::cout << "\n[" << _name << "]" << "\n";
 			_namespace = _name;
